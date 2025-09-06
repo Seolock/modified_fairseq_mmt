@@ -256,9 +256,7 @@ class TransformerDecoderLayer(nn.Module):
         self.image_pre_norm_module = nn.Identity()
         if args.image_pre_norm:
             self.image_pre_norm_module = nn.LayerNorm(args.image_feat_dim, 1e-5, True)
-        
-        self.gate_dense = nn.Linear(args.encoder_embed_dim * 2, args.encoder_embed_dim)
-            
+                    
 
 
     def build_fc1(self, input_dim, output_dim, q_noise, qn_block_size):
@@ -434,11 +432,7 @@ class TransformerDecoderLayer(nn.Module):
                 x_img = self.encoder_attn_layer_norm(x_img)
             
 
-            # x = x_text + x_img
-
-            merged = torch.cat([x_text,x_img], dim=-1)
-            gate = torch.sigmoid(self.gate_dense(merged))
-            x = gate * x_text + (1-gate) * x_img
+            x = x_text + x_img
 
 
 
