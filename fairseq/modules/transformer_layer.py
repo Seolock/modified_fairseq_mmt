@@ -256,7 +256,8 @@ class TransformerDecoderLayer(nn.Module):
         self.image_pre_norm_module = nn.Identity()
         if args.image_pre_norm:
             self.image_pre_norm_module = nn.LayerNorm(args.image_feat_dim, 1e-5, True)
-                    
+        
+        self.lamda1 = nn.Parameter(torch.tensor(0.5))
 
 
     def build_fc1(self, input_dim, output_dim, q_noise, qn_block_size):
@@ -297,11 +298,11 @@ class TransformerDecoderLayer(nn.Module):
     def residual_connection(self, x, residual):
         return residual + x
 
-    def img_attn(self, text, idx, image):
+    def img_attn(self, text, idx, image, mask):
         image = self.image_pre_norm_module(image)
         image = self.image_dropout_module(image)
         text = self.text_dropout_module(text)
-        output, _map = self.selective_attns[idx](query=text, key=image, value=image)  # t, b, c
+        output, _map = self.selective_attns[idx](query=text, key=image, value=image, key_padding_mask=mask)  # t, b, c
         return output
 
     def forward(
@@ -422,7 +423,7 @@ class TransformerDecoderLayer(nn.Module):
             idx = 0
             for img, img_mask in zip(imgs_list, img_masks_list):
                 img = img.transpose(0, 1)
-                x_img.append(self.img_attn(x, idx, img))
+                x_img.append(self.img_attn(x, idx, img,img_mask))
                 idx += 1
             x_img = torch.cat(x_img, dim=0)
 
@@ -431,9 +432,8 @@ class TransformerDecoderLayer(nn.Module):
             if not self.normalize_before:
                 x_img = self.encoder_attn_layer_norm(x_img)
             
-
-            x = x_text + x_img
-
+            lamda=torch.sigmoid(self.lamda1)
+            x = lamda*x_text + (1-lamda)*x_img
 
 
         residual = x

@@ -601,6 +601,10 @@ class TransformerEncoder(FairseqEncoder):
                 new_imgs_list[idx] = img.index_select(0, new_order)
         
         new_img_masks_list = encoder_out.img_masks_list
+        if new_img_masks_list is not None:
+            for idx, img in enumerate(new_img_masks_list):
+                if img is not None:
+                    new_img_masks_list[idx] = img.index_select(0, new_order)
         
 
         return EncoderOut(
